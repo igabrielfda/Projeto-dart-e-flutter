@@ -1,0 +1,353 @@
+import 'package:flutter/material.dart'; // Importa a biblioteca principal do Flutter para construir a interface do usuário.
+import 'dart:async'; // Importa a biblioteca para operações assíncronas, como timers.
+
+void main() {
+  runApp(MyApp()); // Inicia o aplicativo Flutter, executando o widget raiz MyApp.
+}
+
+// Define um widget StatefulWidget chamado MyApp. Widgets com estado podem ter seu estado alterado dinamicamente.
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState(); // Cria e retorna o estado mutável associado a este widget.
+}
+
+// Define a classe _MyAppState, que contém o estado e a lógica do widget MyApp.
+class _MyAppState extends State<MyApp> {
+  // Uma lista de mapas que representam as perguntas do quiz.
+  // Cada mapa contém a pergunta, as opções de resposta e a resposta correta.
+  final List<Map<String, dynamic>> perguntas = [
+    {
+      'pergunta': "Quais os fundamentos do vôlei corretos descritos abaixo?",
+      'opcoes': ['Manchete e toque', 'Observar e defender', 'Passe e defesa'],
+      'respostacorreta': 'Passe e defesa',
+    },
+    {
+      'pergunta': "Qual a principal função de um central dentro de quadra?",
+      'opcoes': ['Bloqueio', 'Ataque', 'Saque'],
+      'respostacorreta': 'Bloqueio',
+    },
+    {
+      'pergunta': "No rodízio 6x0, qual a principal atividade do jogador que estará na 6?",
+      'opcoes': ['Pinga', 'Fundo de quadra', 'Pipe'],
+      'respostacorreta': 'Fundo de quadra',
+    },
+    {
+      'pergunta': "No sistema de rotação 5x1, qual jogador atua nas posições 6 e 4?",
+      'opcoes': ['Central', 'Oposto', 'Ponteiro'],
+      'respostacorreta': 'Ponteiro',
+    },
+    {
+      'pergunta': "No sistema 5x1, em uma bola quebrada no fundo de quadra, na qual é impossível do levantador chegar, quem assume o levantamento?",
+      'opcoes': ['Ponteiro', 'Líbero', 'Oposto'],
+      'respostacorreta': 'Líbero',
+    },
+    {
+      'pergunta': "O que um levantador evita fazer dentro de quadra?",
+      'opcoes': ['Passar', 'Defender', 'Bloquear'],
+      'respostacorreta': 'Passar',
+    },
+    {
+      'pergunta': "Sobre as regras do Vôlei de quadra, em que momento é considerado dois toques?",
+      'opcoes': ['Bloqueio', 'Passe', 'Levantamento'],
+      'respostacorreta': 'Levantamento',
+    },
+    {
+      'pergunta': "O que é rally no vôlei?",
+      'opcoes': [
+        'Quando uma partida demora pra acabar',
+        'Quando o líbero pega uma bola quase impossível',
+        'Quando uma partida acaba muito rápido',
+        'Nenhuma das anteriores'
+      ],
+      'respostacorreta': 'Nenhuma das anteriores',
+    },
+    {
+      'pergunta': "Qual é o objetivo principal do voleibol?",
+      'opcoes': [
+        'Fazer o máximo de pontos possível',
+        'Impedir que a bola toque no chão do próprio campo',
+        'Fazer a bola tocar no chão dentro do campo adversário',
+        'Nenhuma das anteriores'
+      ],
+      'respostacorreta': 'Fazer a bola tocar no chão dentro do campo adversário',
+    },
+    {
+      'pergunta': "Qual é a altura oficial da rede para homens e mulheres?",
+      'opcoes': ['2,42 e 2,23', '2,40 e 2,24', '2,43 e 2,23', 'Nenhuma das anteriores'],
+      'respostacorreta': 'Nenhuma das anteriores',
+    },
+  ];
+
+  int perguntaAtual = 0; // Índice da pergunta atualmente exibida.
+  int pontos = 0; // Pontuação do usuário no quiz.
+  String? mensagem; // Mensagem de feedback exibida após cada resposta.
+  bool quizFinalizado = false; // Indica se todas as perguntas foram respondidas.
+  Map<String, Color?> coresBotoes = {}; // Mapa para controlar as cores dos botões de resposta.
+  Timer? timer; // Objeto Timer para controlar o tempo de resposta.
+  int tempoRestante = 10; // Tempo restante para responder a pergunta atual (em segundos).
+  bool isTimerRunning = false; // Indica se o timer está atualmente em execução.
+  String imagemFeedback = ""; // URL da imagem de feedback (certo/errado) a ser exibida.
+  double imagemOpacidade = 0; // Controla a opacidade da imagem de feedback (para animação).
+
+  // Função assíncrona para verificar a resposta do usuário.
+  void verificarResposta(String respostaEscolhida) async {
+    String respostaCorreta = perguntas[perguntaAtual]['respostacorreta'];
+
+    setState(() {
+      coresBotoes = {}; // Limpa as cores dos botões antes de exibir o resultado.
+      for (var opcao in perguntas[perguntaAtual]['opcoes']) {
+        if (opcao == respostaCorreta) {
+          coresBotoes[opcao] = Colors.green; // Define a cor do botão da resposta correta para verde.
+        } else if (opcao == respostaEscolhida) {
+          coresBotoes[opcao] = Colors.red; // Define a cor do botão da resposta escolhida (incorreta) para vermelho.
+        }
+      }
+
+      bool acertou = respostaEscolhida == respostaCorreta; // Verifica se a resposta escolhida está correta.
+      bool perguntaImpar = (perguntaAtual + 1) % 2 != 0; // Verifica se o número da pergunta atual é ímpar.
+
+      // Atualiza a pontuação e a mensagem de feedback com base na correção da resposta.
+      if (acertou) {
+        pontos++;
+        mensagem = '✅ Resposta certa! +1 ponto';
+        imagemFeedback = perguntaImpar
+            ? 'https://i.imgur.com/DR8iaxB.png' // Imagem para resposta certa em pergunta ímpar.
+            : 'https://i.imgur.com/zbNG0dd.png'; // Imagem para resposta certa em pergunta par.
+      } else {
+        mensagem = '❌ Resposta errada!';
+        imagemFeedback = perguntaImpar
+            ? 'https://i.imgur.com/Jjeh3Ne.png' // Imagem para resposta errada em pergunta ímpar.
+            : 'https://i.imgur.com/neU6P9W.png'; // Imagem para resposta errada em pergunta par.
+      }
+
+      imagemOpacidade = 1; // Torna a imagem de feedback visível.
+    });
+
+    // Aguarda 2 segundos antes de passar para a próxima pergunta ou finalizar o quiz.
+    await Future.delayed(Duration(seconds: 2));
+
+    setState(() {
+      mensagem = null; // Limpa a mensagem de feedback.
+      coresBotoes.clear(); // Limpa as cores dos botões.
+      imagemOpacidade = 0; // Oculta a imagem de feedback.
+      if (perguntaAtual < perguntas.length - 1) {
+        perguntaAtual++; // Avança para a próxima pergunta.
+      } else {
+        quizFinalizado = true; // Define o quiz como finalizado se todas as perguntas foram respondidas.
+      }
+    });
+
+    // Se o quiz não estiver finalizado, reinicia o timer para a próxima pergunta.
+    if (!quizFinalizado) {
+      resetTimer();
+    }
+  }
+
+  // Função para reiniciar o quiz.
+  void reiniciarQuiz() {
+    setState(() {
+      perguntas.shuffle(); // Embaralha a ordem das perguntas.
+      for (var pergunta in perguntas) {
+        (pergunta['opcoes'] as List).shuffle(); // Embaralha a ordem das opções de cada pergunta.
+      }
+      perguntaAtual = 0; // Reseta o índice da pergunta atual para 0.
+      pontos = 0; // Reseta a pontuação para 0.
+      quizFinalizado = false; // Reseta o estado de finalização do quiz para falso.
+      mensagem = null; // Limpa qualquer mensagem pendente.
+      coresBotoes.clear(); // Limpa as cores dos botões.
+      resetTimer(); // Reinicia o timer.
+    });
+  }
+
+  // Função para iniciar o timer de resposta.
+  void startTimer() {
+    setState(() {
+      tempoRestante = 10; // Define o tempo inicial para 10 segundos.
+      isTimerRunning = true; // Marca o timer como em execução.
+    });
+
+    // Cria um timer periódico que dispara a cada 1 segundo.
+    timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
+      setState(() {
+        if (tempoRestante > 0) {
+          tempoRestante--; // Decrementa o tempo restante.
+        } else {
+          timer?.cancel(); // Cancela o timer quando o tempo chega a zero.
+          if (!quizFinalizado) {
+            verificarResposta(''); // Verifica a resposta (como se nada tivesse sido escolhido) quando o tempo acaba.
+          }
+        }
+      });
+    });
+  }
+
+  // Função para resetar o timer.
+  void resetTimer() {
+    if (timer?.isActive ?? false) {
+      timer?.cancel(); // Cancela o timer atual se estiver ativo.
+    }
+    startTimer(); // Inicia um novo timer.
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    reiniciarQuiz(); // Reinicia o quiz quando o widget é criado pela primeira vez.
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    if (timer?.isActive ?? false) {
+      timer?.cancel(); // Cancela o timer quando o widget é removido da árvore.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false, // Remove o banner de "Debug" no canto da tela.
+      theme: ThemeData(
+        primarySwatch: Colors.orange, // Define a cor primária do tema para laranja.
+        scaffoldBackgroundColor: Colors.green, // Define a cor de fundo do Scaffold para verde.
+      ),
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('🏐 VôQuiz'), // Título da barra superior.
+          centerTitle: true, // Centraliza o título na barra superior.
+          backgroundColor: Colors.blue[800], // Define a cor de fundo da AppBar para um tom de azul mais escuro.
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0), // Adiciona um preenchimento ao redor do conteúdo principal.
+            child: quizFinalizado
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center, // Centraliza os widgets na coluna.
+                    children: [
+                      Icon(Icons.emoji_events, size: 80, color: Colors.orange), // Ícone de troféu para indicar o fim do quiz.
+                      SizedBox(height: 20), // Espaçamento vertical.
+                      Text(
+                        'Parabéns!\nVocê concluiu o quiz!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 20), // Espaçamento vertical.
+                      Text('Pontuação final: $pontos / ${perguntas.length}',
+                          style: TextStyle(fontSize: 18)), // Exibe a pontuação final.
+                      SizedBox(height: 30), // Espaçamento vertical.
+                      ElevatedButton(
+                        onPressed: reiniciarQuiz, // Chama a função para reiniciar o quiz ao pressionar o botão.
+                        child: Text('🔁 Recomeçar'), // Texto do botão de reiniciar.
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(horizontal: 30, vertical: 12), // Preenchimento interno do botão.
+                          backgroundColor: Colors.orange, // Cor de fundo do botão.
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20), // Bordas arredondadas do botão.
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center, // Centraliza os widgets na coluna.
+                    children: [
+                      // Exibe a imagem de feedback se a opacidade for maior que 0 (visível).
+                      if (imagemOpacidade > 0) ...[
+                        AnimatedOpacity(
+                          opacity: imagemOpacidade, // Controla a opacidade da imagem.
+                          duration: Duration(milliseconds: 400), // Duração da animação de opacidade.
+                          child: AnimatedScale(
+                            scale: imagemOpacidade, // Controla a escala da imagem (para efeito de "pop").
+                            duration: Duration(milliseconds: 400), // Duração da animação de escala.
+                            child: Image.network(imagemFeedback, height: 120), // Exibe a imagem da rede.
+                          ),
+                        ),
+                        SizedBox(height: 20), // Espaçamento vertical.
+                      ],
+                      Text(
+                        'Pergunta ${perguntaAtual + 1} de ${perguntas.length}', // Exibe o número da pergunta atual.
+                        style: TextStyle(fontSize: 16, color: Colors.grey[700]), // Estilo do texto.
+                      ),
+                      SizedBox(height: 20), // Espaçamento vertical.
+                      AnimatedSwitcher(
+                        duration: Duration(milliseconds: 500), // Duração da animação de transição entre perguntas.
+                        transitionBuilder: (child, animation) {
+                          // Define uma animação de slide e fade para a transição entre as perguntas.
+                          return SlideTransition(
+                            position: Tween<Offset>(
+                              begin: Offset(1.0, 0.0),
+                              end: Offset(0.0, 0.0),
+                            ).animate(animation),
+                            child: FadeTransition(opacity: animation, child: child),
+                          );
+                        },
+                        child: Column(
+                          key: ValueKey<int>(perguntaAtual), // Chave única para forçar a reconstrução na troca de perguntas.
+                          children: [
+                            Card(
+                              elevation: 5, // Adiciona uma sombra ao redor do card.
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15)), // Bordas arredondadas do card.
+                              child: Padding(
+                                padding: const EdgeInsets.all(20.0), // Preenchimento interno do card.
+                                child: Text(
+                                  perguntas[perguntaAtual]['pergunta'], // Exibe a pergunta atual.
+                                  textAlign: TextAlign.center, // Centraliza o texto da pergunta.
+                                  style: TextStyle(
+                                      fontSize: 20, fontWeight: FontWeight.bold), // Estilo do texto da pergunta.
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 20), // Espaçamento vertical.
+                      // Mapeia as opções de resposta para criar botões ElevatedButtons.
+                      ...perguntas[perguntaAtual]['opcoes'].map<Widget>((opcao) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6.0), // Preenchimento vertical ao redor de cada botão.
+                          child: ElevatedButton(
+                            onPressed: mensagem == null ? () => verificarResposta(opcao) : null, // Chama verificarResposta ao pressionar se não houver mensagem de feedback.
+                            child: Text(opcao, style: TextStyle(fontSize: 16)), // Texto do botão da opção.
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: coresBotoes[opcao] ?? Colors.orange[300], // Define a cor de fundo do botão com base na resposta.
+                              foregroundColor: Colors.black, // Cor do texto do botão.
+                              minimumSize: Size(double.infinity, 60), // Define a largura máxima e altura mínima do botão.
+                              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16), // Preenchimento interno do botão.
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12), // Bordas arredondadas do botão.
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      // Exibe a mensagem de feedback se não for nula.
+                      if (mensagem != null) ...[
+                        SizedBox(height: 20), // Espaçamento vertical.
+                        Text(
+                          mensagem!, // Exibe a mensagem.
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: mensagem!.contains('✅') ? Colors.white : Colors.red, // Define a cor da mensagem com base no resultado.
+                          ),
+                        ),
+                        SizedBox(height: 20), // Espaçamento vertical.
+                      ],
+                      // Exibe o tempo restante se o timer estiver em execução.
+                      if (isTimerRunning) ...[
+                        SizedBox(height: 20), // Espaçamento vertical.
+                        Text(
+                          'Tempo restante: $tempoRestante', // Exibe o tempo restante.
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold), // Estilo do texto do tempo.
+                        ),
+                  
+                      ]
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
