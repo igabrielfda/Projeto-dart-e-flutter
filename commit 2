@@ -162,7 +162,7 @@ class _MyAppState extends State<MyApp> {
   // Função para iniciar o timer de resposta.
   void startTimer() {
     setState(() {
-      tempoRestante = 10; // Define o tempo inicial para 10 segundos.
+      tempoRestante = 20; // Define o tempo inicial para 10 segundos.
       isTimerRunning = true; // Marca o timer como em execução.
     });
 
